@@ -10,6 +10,8 @@ import numpy as np
 import sys
 from keras_frcnn import config
 
+# import skimage.io as skio
+
 
 sys.setrecursionlimit(40000)
 C = config.Config()
@@ -36,7 +38,7 @@ def format_img(img):
     # img[:, 0, :, :] -= 103.939
     # img[:, 1, :, :] -= 116.779
     # img[:, 2, :, :] -= 123.68
-    x_img -= 109.15286235
+    img -= 109.15286235
     return img
 
 
@@ -104,9 +106,15 @@ visualise = True
 
 print('Parsing annotation files')
 img_path = sys.argv[1]
+
+if len(sys.argv) > 2:
+    n_images = sys.argv[2]
+else:
+    n_images = len(os.listdir(img_path))
+
 bufsize = 0
 
-for idx, img_name in enumerate(sorted(os.listdir(img_path))):
+for idx, img_name in enumerate(sorted(os.listdir(img_path))[:n_images]):
     print(img_name)
     filepath = os.path.join(img_path, img_name)
     img = cv2.imread(filepath)
@@ -114,9 +122,10 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
     X = format_img(img)
 
     img_scaled = np.transpose(X[0, (2, 1, 0), :, :], (1, 2, 0)).copy()
-    img_scaled[:, :, 0] += 123.68
-    img_scaled[:, :, 1] += 116.779
-    img_scaled[:, :, 2] += 103.939
+    # img_scaled[:, :, 0] += 123.68
+    # img_scaled[:, :, 1] += 116.779
+    # img_scaled[:, :, 2] += 103.939
+    img_scaled += 109.15286235
 
     img_scaled = img_scaled.astype(np.uint8)
 
@@ -174,6 +183,7 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 
     all_dets = {}
 
+    print(len(bboxes))
     for key in bboxes:
         bbox = np.array(bboxes[key])
 
@@ -198,5 +208,7 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
         # cv2.rectangle(img_scaled,(textOrg[0] - 5,textOrg[1]+baseLine - 5),(textOrg[
         # 0]+retval[0] + 5,textOrg[1]-retval[1] - 5),(255,255,255),-1)
         # cv2.putText(img_scaled,textLabel,textOrg,cv2.FONT_HERSHEY_SIMPLEX,1,(0,0,0),1)
-    cv2.imshow('img', img_scaled)
-    cv2.waitKey(0)
+    # cv2.imshow('img', img_scaled)
+    cv2.imsave(img_name, img_scaled)
+    # skio.imsave(img_name, img_scaled)
+    # cv2.waitKey(0)
