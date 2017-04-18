@@ -138,5 +138,6 @@ fabric.properties
 .DS_Store
 classes.json
 logs.txt
-resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5
-resnet50_weights_th_dim_ordering_th_kernels_notop.h5
+resnet50_weights*
+weights*
+logs/

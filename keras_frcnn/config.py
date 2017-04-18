@@ -52,4 +52,5 @@ class Config:
             # self.base_net_weights = 'resnet50_weights_tf_dim_ordering_tf_kernels.h5'
             self.base_net_weights = 'resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
-        self.model_path = 'model_frcnn.hdf5'
+        # self.model_path = 'model_frcnn.hdf5'
+        self.model_path = 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'

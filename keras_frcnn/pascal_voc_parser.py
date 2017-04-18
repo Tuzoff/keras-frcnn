@@ -62,7 +62,7 @@ def get_data(input_path):
                     elif element_filename in test_files:
                         annotation_data['imageset'] = 'test'
                     else:
-                        annotation_data['imageset'] = 'test'
+                        annotation_data['imageset'] = 'out'
 
                 for element_obj in element_objs:
                     class_name = element_obj.find('name').text

@@ -10,7 +10,7 @@ import numpy as np
 import sys
 from keras_frcnn import config
 
-# import skimage.io as skio
+import skimage.io as skio
 
 
 sys.setrecursionlimit(40000)
@@ -90,7 +90,10 @@ classifier = nn.classifier(feature_map_input, roi_input, num_rois,
 model_rpn = Model(img_input, rpn + [shared_layers])
 model_classifier = Model([feature_map_input, roi_input], classifier)
 
-weights_path = 'model_frcnn.hdf5'
+if len(sys.argv) > 2:
+    weights_path = sys.argv[2]
+else:
+    weights_path = 'model_frcnn.hdf5'
 
 model_rpn.load_weights(weights_path, by_name=True)
 model_classifier.load_weights(weights_path, by_name=True)
@@ -107,11 +110,13 @@ visualise = True
 print('Parsing annotation files')
 img_path = sys.argv[1]
 
-if len(sys.argv) > 2:
-    n_images = sys.argv[2]
+if len(sys.argv) > 3:
+    n_images = int(sys.argv[3])
 else:
     n_images = len(os.listdir(img_path))
 
+print(n_images)
+    
 bufsize = 0
 
 for idx, img_name in enumerate(sorted(os.listdir(img_path))[:n_images]):
@@ -209,6 +214,6 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))[:n_images]):
         # 0]+retval[0] + 5,textOrg[1]-retval[1] - 5),(255,255,255),-1)
         # cv2.putText(img_scaled,textLabel,textOrg,cv2.FONT_HERSHEY_SIMPLEX,1,(0,0,0),1)
     # cv2.imshow('img', img_scaled)
-    cv2.imsave(img_name, img_scaled)
-    # skio.imsave(img_name, img_scaled)
+    # cv2.imsave(img_name, img_scaled)
+    skio.imsave(img_name, img_scaled)
     # cv2.waitKey(0)

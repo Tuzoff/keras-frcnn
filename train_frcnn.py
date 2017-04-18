@@ -54,6 +54,7 @@ from keras.models import Model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras_frcnn import losses
 from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import TensorBoard, CSVLogger
 
 
 if K.image_dim_ordering() == 'th':
@@ -99,13 +100,16 @@ model.compile(optimizer=optimizer,
 
 nb_epochs = 100
 
-callbacks = [EarlyStopping(monitor='val_loss', patience=20, verbose=0),
-             ModelCheckpoint(C.model_path, monitor='val_loss', save_best_only=True, verbose=0),
-             ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-7, verbose=1)]
+callbacks = [EarlyStopping(monitor='val_loss', patience=20, verbose=1),
+#              ModelCheckpoint(C.model_path, monitor='val_loss', save_best_only=True, verbose=1),
+             ModelCheckpoint(C.model_path, monitor='val_loss', save_best_only=True, verbose=1),
+             ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-7, verbose=1),
+             TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True),
+             CSVLogger('./logs/training.log')]
 # train_samples_per_epoch = 500  # len(train_imgs)
 # nb_val_samples = 100  # len(val_imgs),
 train_samples_per_epoch = len(train_imgs)
-nb_val_samples = len(val_imgs),
+nb_val_samples = len(val_imgs)
 
 print 'Starting training'
 
@@ -116,4 +120,4 @@ print 'Starting training'
 model.fit_generator(data_gen_train, steps_per_epoch=train_samples_per_epoch, epochs=nb_epochs,
                     validation_data=data_gen_val, validation_steps=nb_val_samples,
                     callbacks=callbacks,
-                    max_q_size=1, workers=8)
+                    max_q_size=1, workers=1)
