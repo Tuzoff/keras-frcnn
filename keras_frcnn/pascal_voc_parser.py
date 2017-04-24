@@ -1,6 +1,7 @@
 import os
 import cv2
 import xml.etree.ElementTree as ET
+import numpy as np
 
 
 def get_data(input_path):
@@ -46,7 +47,7 @@ def get_data(input_path):
                 element = et.getroot()
 
                 element_objs = element.findall('object')
-                element_filename = element.find('filename').text.strip()
+                element_filename = element.find('filename').text
                 element_width = int(element.find('size').find('width').text)
                 element_height = int(element.find('size').find('height').text)
 
@@ -96,4 +97,5 @@ def get_data(input_path):
             except Exception as e:
                 print(e)
                 continue
+
     return all_imgs, classes_count, class_mapping
