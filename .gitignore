@@ -140,4 +140,5 @@ classes.json
 logs.txt
 resnet50_weights*
 weights*
+tests/
 logs/
