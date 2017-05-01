@@ -12,6 +12,9 @@ from keras.layers import Input
 from keras.models import Model
 from keras_frcnn import roi_helpers
 
+# import skimage.io as skio
+
+
 sys.setrecursionlimit(40000)
 
 parser = OptionParser()
@@ -128,10 +131,11 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 	X = format_img(img, C)
 
 	img_scaled = np.transpose(X.copy()[0, (2, 1, 0), :, :], (1, 2, 0)).copy()
-	img_scaled[:, :, 0] += 123.68
-	img_scaled[:, :, 1] += 116.779
-	img_scaled[:, :, 2] += 103.939
-	
+	# img_scaled[:, :, 0] += 123.68
+	# img_scaled[:, :, 1] += 116.779
+	# img_scaled[:, :, 2] += 103.939
+	img_scaled += 109.15286235 # TODO: get values from config
+
 	img_scaled = img_scaled.astype(np.uint8)
 
 	if K.image_dim_ordering() == 'tf':
@@ -214,5 +218,7 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 			cv2.putText(img_scaled, textLabel, textOrg, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
 	print('Elapsed time = {}'.format(time.time() - st))
 	cv2.imshow('img', img_scaled)
+	# cv2.imsave(img_name, img_scaled)
+	# skio.imsave(img_name, img_scaled)
 	cv2.waitKey(0)
 	print(all_dets)

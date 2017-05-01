@@ -11,8 +11,8 @@ def get_data(input_path):
 
 	visualise = False
 
-	data_paths = [os.path.join(input_path,s) for s in ['VOC2007', 'VOC2012']]
-	
+	# data_paths = [os.path.join(input_path,s) for s in ['VOC2007', 'VOC2012']]
+	data_paths = [os.path.join(input_path, s) for s in ['VOC']]
 
 	print('Parsing annotation files')
 
@@ -59,7 +59,8 @@ def get_data(input_path):
 					elif element_filename in test_files:
 						annotation_data['imageset'] = 'test'
 					else:
-						annotation_data['imageset'] = 'trainval'
+						# annotation_data['imageset'] = 'trainval'
+						annotation_data['imageset'] = 'out'
 
 				for element_obj in element_objs:
 					class_name = element_obj.find('name').text
