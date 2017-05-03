@@ -87,3 +87,11 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Data sources
+*.txt
+*.pickle
+*.h5
+*.hdf5
+*.csv
+predictions/
