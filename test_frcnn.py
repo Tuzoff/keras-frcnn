@@ -31,9 +31,17 @@ if not options.test_path:   # if filename is not given
 
 config_output_filename = options.config_filename
 
-with open(config_output_filename, 'r') as f_in:
+with open(config_output_filename, 'rb') as f_in:
 	C = pickle.load(f_in)
 
+# GPU Memory cheat    
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+gpu_config = tf.ConfigProto()
+gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.5
+set_session(tf.Session(config=gpu_config))
+    
+    
 # turn off any data augmentation at test time
 C.use_horizontal_flips = False
 C.use_vertical_flips = False
@@ -71,9 +79,11 @@ class_mapping = C.class_mapping
 if 'bg' not in class_mapping:
 	class_mapping['bg'] = len(class_mapping)
 
-class_mapping = {v: k for k, v in class_mapping.iteritems()}
+class_mapping = {v: k for k, v in class_mapping.items()}
 print(class_mapping)
-class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
+
+# CV2 doesn't like numpy types :(
+class_to_color = {class_mapping[v]: [int(i) for i in np.random.randint(0, 255, 3)] for v in class_mapping}
 C.num_rois = int(options.num_rois)
 
 if K.image_dim_ordering() == 'th':
@@ -115,6 +125,11 @@ classes = {}
 bbox_threshold = 0.8
 
 visualise = True
+
+# Create folder for predictions
+dir_for_images = 'predictions'
+if not os.path.exists(dir_for_images):
+    os.makedirs(dir_for_images)
 
 for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 	print(img_name)
@@ -211,6 +226,5 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 			cv2.rectangle(img_scaled, (textOrg[0] - 5,textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (255, 255, 255), -1)
 			cv2.putText(img_scaled, textLabel, textOrg, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
 	print('Elapsed time = {}'.format(time.time() - st))
-	cv2.imshow('img', img_scaled)
-	cv2.waitKey(0)
+	cv2.imwrite(os.path.join(dir_for_images, img_name), img_scaled)
 	print(all_dets)
