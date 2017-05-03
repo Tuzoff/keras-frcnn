@@ -48,6 +48,12 @@ elif options.parser == 'simple':
 	from keras_frcnn.simple_parser import get_data
 else:
 	raise ValueError("Command line option parser must be one of 'pascal_voc' or 'simple'")
+    
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+gpu_config = tf.ConfigProto()
+gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.5
+set_session(tf.Session(config=gpu_config))
 
 # pass the settings from the command line, and persist them in the config object
 C = config.Config()
@@ -59,8 +65,8 @@ C.rot_90 = options.rot_90
 
 C.model_path = options.output_weight_path
 
-if options.input_weight_path:
-	C.base_net_weights = options.input_weight_path
+#if options.input_weight_path:
+#	C.base_net_weights = options.input_weight_path
 
 all_imgs, classes_count, class_mapping = get_data(options.train_path)
 
@@ -70,7 +76,7 @@ if 'bg' not in classes_count:
 
 C.class_mapping = class_mapping
 
-inv_map = {v: k for k, v in class_mapping.iteritems()}
+inv_map = {v: k for k, v in class_mapping.items()}
 
 print('Training images per class:')
 pprint.pprint(classes_count)
@@ -78,8 +84,8 @@ print('Num classes (including bg) = {}'.format(len(classes_count)))
 
 config_output_filename = options.config_filename
 
-with open(config_output_filename, 'w') as config_f:
-	pickle.dump(C,config_f)
+with open(config_output_filename, 'wb') as config_f:
+	pickle.dump(C, config_f)
 	print('Config has been written to {}, and can be loaded when testing to ensure correct results'.format(config_output_filename))
 
 random.shuffle(all_imgs)
@@ -119,15 +125,15 @@ model_classifier = Model([img_input, roi_input], classifier)
 # this is a model that holds both the RPN and the classifier, used to load/save weights for the models
 model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 
-try:
-	print('loading weights from {}'.format(C.base_net_weights))
-	model_rpn.load_weights(C.base_net_weights,by_name=True)
-	model_classifier.load_weights(C.base_net_weights,by_name=True)
-except:
-	print('Could not load pretrained model weights. Weights can be found at {} and {}'.format(
-		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_th_dim_ordering_th_kernels_notop.h5',
-		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
-	))
+#try:
+print('loading weights from {}'.format(C.base_net_weights))
+model_rpn.load_weights(C.base_net_weights, by_name=True)
+model_classifier.load_weights(C.base_net_weights, by_name=True)
+#except:
+#	print('Could not load pretrained model weights. Weights can be found at {} and {}'.format(
+#		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_th_dim_ordering_th_kernels_notop.h5',
+#		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
+#	))
 
 optimizer = Adam(lr=1e-5)
 optimizer_classifier = Adam(lr=1e-5)
@@ -136,7 +142,7 @@ model_rpn.compile(optimizer=optimizer, loss=[losses.rpn_loss_cls(num_anchors), l
 model_classifier.compile(optimizer=optimizer_classifier, loss=[losses.class_loss_cls, losses.class_loss_regr(len(classes_count)-1)], metrics={'dense_class_{}'.format(len(classes_count)): 'accuracy'})
 model_all.compile(optimizer='sgd', loss='mae')
 
-epoch_length = 1000
+epoch_length = 50#1000
 num_epochs = int(options.num_epochs)
 iter_num = 0
 epoch_num = 0
@@ -148,12 +154,13 @@ start_time = time.time()
 
 best_loss = np.Inf
 
-class_mapping_inv = {v: k for k, v in class_mapping.iteritems()}
+class_mapping_inv = {v: k for k, v in class_mapping.items()}
 print('Starting training')
 
 while True:
 	try:
-		X, Y, img_data = data_gen_train.next()
+		ts_start = time.time()
+		X, Y, img_data = next(data_gen_train)
 		loss_rpn = model_rpn.train_on_batch(X, Y)
 		P_rpn = model_rpn.predict_on_batch(X)
 		R = roi_helpers.rpn_to_roi(P_rpn[0], P_rpn[1], C, K.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
@@ -181,7 +188,7 @@ while True:
 			if len(pos_samples) < C.num_rois/2:
 				selected_pos_samples = pos_samples.tolist()
 			else:
-				selected_pos_samples = np.random.choice(pos_samples, C.num_rois/2, replace=False).tolist()
+				selected_pos_samples = np.random.choice(pos_samples, int(C.num_rois/2), replace=False).tolist()
 
 			selected_neg_samples = np.random.choice(neg_samples, C.num_rois - len(selected_pos_samples),replace=False).tolist()
 			sel_samples = selected_pos_samples + selected_neg_samples
@@ -193,9 +200,10 @@ while True:
 				sel_samples = random.choice(neg_samples)
 			else:
 				sel_samples = random.choice(pos_samples)
+		ts_data_load = time.time() - ts_start
 
 		loss_class = model_classifier.train_on_batch([X, X2[:, sel_samples, :]], [Y1[:, sel_samples, :], Y2[:, sel_samples, :]])
-
+		ts_batch = time.time() - ts_start
 		losses[iter_num, 0] = loss_rpn[1]
 		losses[iter_num, 1] = loss_rpn[2]
 
@@ -204,6 +212,8 @@ while True:
 		losses[iter_num, 4] = loss_class[3]
 
 		iter_num += 1
+		print('Iteration num: {0} Epoch num: {1} Start {2} Data load {3} Train step {4}'.format(
+			iter_num, epoch_num, ts_start, ts_data_load, ts_batch))        
 
 		if iter_num == epoch_length:
 			loss_rpn_cls = np.mean(losses[:, 0])

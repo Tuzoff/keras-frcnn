@@ -141,7 +141,7 @@ class_mapping = C.class_mapping
 if 'bg' not in class_mapping:
 	class_mapping['bg'] = len(class_mapping)
 
-class_mapping = {v: k for k, v in class_mapping.iteritems()}
+class_mapping = {v: k for k, v in class_mapping.items()}
 print(class_mapping)
 class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
 C.num_rois = int(options.num_rois)
@@ -256,6 +256,7 @@ for idx, img_data in enumerate(test_imgs):
 				th /= C.classifier_regr_std[3]
 				x, y, w, h = roi_helpers.apply_regr(x, y, w, h, tx, ty, tw, th)
 			except:
+				print('Error in measure map')
 				pass
 			bboxes[cls_name].append([16 * x, 16 * y, 16 * (x + w), 16 * (y + h)])
 			probs[cls_name].append(np.max(P_cls[0, ii, :]))

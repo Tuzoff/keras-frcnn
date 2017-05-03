@@ -1,7 +1,9 @@
 import numpy as np
 import pdb
 import math
-import data_generators
+#from keras_frcnn.data_generators import get_new_img_size
+from .utils import get_new_img_size, iou
+#import keras_frcnn.data_generators as data_generators
 import copy
 
 
@@ -10,7 +12,7 @@ def calc_iou(R, img_data, C, class_mapping):
 	bboxes = img_data['bboxes']
 	(width, height) = (img_data['width'], img_data['height'])
 	# get image dimensions for resizing
-	(resized_width, resized_height) = data_generators.get_new_img_size(width, height, C.im_size)
+	(resized_width, resized_height) = get_new_img_size(width, height, C.im_size)
 
 	gta = np.zeros((len(bboxes), 4))
 
@@ -37,7 +39,7 @@ def calc_iou(R, img_data, C, class_mapping):
 		best_iou = 0.0
 		best_bbox = -1
 		for bbox_num in range(len(bboxes)):
-			curr_iou = data_generators.iou([gta[bbox_num, 0], gta[bbox_num, 2], gta[bbox_num, 1], gta[bbox_num, 3]], [x1, y1, x2, y2])
+			curr_iou = iou([gta[bbox_num, 0], gta[bbox_num, 2], gta[bbox_num, 1], gta[bbox_num, 3]], [x1, y1, x2, y2])
 			if curr_iou > best_iou:
 				best_iou = curr_iou
 				best_bbox = bbox_num
@@ -228,8 +230,8 @@ def rpn_to_roi(rpn_layer, regr_layer, C, dim_ordering, use_regr = True, max_boxe
 				regr = np.transpose(regr,(2,0,1))
 
 			curr_layer += 1
-			for jy in xrange(rows):
-				for ix in xrange(cols):
+			for jy in range(rows):
+				for ix in range(cols):
 					if rpn[jy,ix] > 0.0:
 						(tx, ty, tw, th) = regr[:, jy, ix]
 
