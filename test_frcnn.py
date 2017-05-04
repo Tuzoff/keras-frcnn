@@ -21,7 +21,7 @@ parser = OptionParser()
 
 parser.add_option("-p", "--path", dest="test_path", help="Path to test data.")
 parser.add_option("-n", "--num_rois", dest="num_rois",
-				help="Number of ROIs per iteration. Higher means more memory use.", default=32)
+				help="Number of ROIs per iteration. Higher means more memory use.", default=-1)
 parser.add_option("--config_filename", dest="config_filename", help=
 				"Location to read the metadata related to the training (generated when training).",
 				default="config.pickle")
@@ -37,12 +37,12 @@ config_output_filename = options.config_filename
 with open(config_output_filename, 'rb') as f_in:
 	C = pickle.load(f_in)
 
-# GPU Memory cheat    
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
-gpu_config = tf.ConfigProto()
-gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.5
-set_session(tf.Session(config=gpu_config))
+# # GPU Memory cheat
+# import tensorflow as tf
+# from keras.backend.tensorflow_backend import set_session
+# gpu_config = tf.ConfigProto()
+# gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.5
+# set_session(tf.Session(config=gpu_config))
     
     
 # turn off any data augmentation at test time
@@ -87,7 +87,8 @@ print(class_mapping)
 
 # CV2 doesn't like numpy types :(
 class_to_color = {class_mapping[v]: [int(i) for i in np.random.randint(0, 255, 3)] for v in class_mapping}
-C.num_rois = int(options.num_rois)
+if options.num_rois > 0:
+	C.num_rois = int(options.num_rois)
 
 if K.image_dim_ordering() == 'th':
 	input_shape_img = (3, None, None)
@@ -149,7 +150,10 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 	# img_scaled[:, :, 0] += 123.68
 	# img_scaled[:, :, 1] += 116.779
 	# img_scaled[:, :, 2] += 103.939
-	img_scaled += 109.15286235 # TODO: get values from config
+	img_scaled[:, :, 0] += C.img_channel_mean[0]
+	img_scaled[:, :, 1] += C.img_channel_mean[1]
+	img_scaled[:, :, 2] += C.img_channel_mean[2]
+	# img_scaled += 109.15286235
 
 	img_scaled = img_scaled.astype(np.uint8)
 
@@ -208,7 +212,9 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 				x, y, w, h = roi_helpers.apply_regr(x, y, w, h, tx, ty, tw, th)
 			except:
 				pass
-			bboxes[cls_name].append([16*x, 16*y, 16*(x+w), 16*(y+h)])
+			# bboxes[cls_name].append([16*x, 16*y, 16*(x+w), 16*(y+h)])
+			bboxes[cls_name].append([C.rpn_stride * x, C.rpn_stride * y,
+									 C.rpn_stride * (x + w), C.rpn_stride * (y + h)])
 			probs[cls_name].append(np.max(P_cls[0, ii, :]))
 
 	all_dets = []
@@ -234,6 +240,5 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
 	print('Elapsed time = {}'.format(time.time() - st))
 
 	cv2.imwrite(os.path.join(dir_for_images, img_name), img_scaled)
-	# cv2.imsave(img_name, img_scaled)
 	# skio.imsave(img_name, img_scaled)
 	print(all_dets)

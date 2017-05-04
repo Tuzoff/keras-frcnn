@@ -18,23 +18,34 @@ import keras_frcnn.roi_helpers as roi_helpers
 
 sys.setrecursionlimit(40000)
 
+# pass the settings from the command line, and persist them in the config object
+C = config.Config()
+
 parser = OptionParser()
 
 parser.add_option("-p", "--path", dest="train_path", help="Path to training data.")
 parser.add_option("-o", "--parser", dest="parser", help="Parser to use. One of simple or pascal_voc",
 				default="pascal_voc"),
 parser.add_option("-n", "--num_rois", dest="num_rois",
-				help="Number of ROIs per iteration. Higher means more memory use.", default=32)
-parser.add_option("--hf", dest="horizontal_flips", help="Augment with horizontal flips in training.", default=True)
-parser.add_option("--vf", dest="vertical_flips", help="Augment with vertical flips in training.", default=False)
+				  help="Number of ROIs per iteration. Higher means more memory use.",
+				  default=C.num_rois)
+parser.add_option("--hf", dest="horizontal_flips", help="Augment with horizontal flips in training.",
+				  default=C.use_horizontal_flips)
+parser.add_option("--vf", dest="vertical_flips", help="Augment with vertical flips in training.",
+				  default=C.use_vertical_flips)
 parser.add_option("--rot", "--rot_90", dest="rot_90", help="Augment with 90 degree rotations in training.",
-				default=False)
-parser.add_option("--num_epochs", dest="num_epochs", help="Number of epochs.", default=100)
+				  default=C.rot_90)
+parser.add_option("--num_epochs", dest="num_epochs", help="Number of epochs.",
+				  default=C.num_epochs)
 parser.add_option("--config_filename", dest="config_filename", help=
 				"Location to store all the metadata related to the training (to be used when testing).",
 				default="config.pickle")
-parser.add_option("--output_weight_path", dest="output_weight_path", help="Output path for weights.", default='./model_frcnn.hdf5')
-parser.add_option("--input_weight_path", dest="input_weight_path", help="Input path for weights. If not specified, will try to load default weights provided by keras.", default='./model_frcnn.hdf5')
+parser.add_option("--output_weight_path", dest="output_weight_path",
+				  help="Output path for weights.",
+				  default=C.model_path)
+parser.add_option("--input_weight_path", dest="input_weight_path",
+				  help="Input path for weights. If not specified, will try to load default weights provided by keras.",
+				  default=C.base_net_weights)
 
 (options, args) = parser.parse_args()
 
@@ -49,14 +60,11 @@ elif options.parser == 'simple':
 else:
 	raise ValueError("Command line option parser must be one of 'pascal_voc' or 'simple'")
     
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
-gpu_config = tf.ConfigProto()
-gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.5
-set_session(tf.Session(config=gpu_config))
-
-# pass the settings from the command line, and persist them in the config object
-C = config.Config()
+# import tensorflow as tf
+# from keras.backend.tensorflow_backend import set_session
+# gpu_config = tf.ConfigProto()
+# gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.5
+# set_session(tf.Session(config=gpu_config))
 
 C.num_rois = int(options.num_rois)
 C.use_horizontal_flips = options.horizontal_flips
@@ -125,15 +133,15 @@ model_classifier = Model([img_input, roi_input], classifier)
 # this is a model that holds both the RPN and the classifier, used to load/save weights for the models
 model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 
-#try:
-print('loading weights from {}'.format(C.base_net_weights))
-model_rpn.load_weights(C.base_net_weights, by_name=True)
-model_classifier.load_weights(C.base_net_weights, by_name=True)
-#except:
-#	print('Could not load pretrained model weights. Weights can be found at {} and {}'.format(
-#		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_th_dim_ordering_th_kernels_notop.h5',
-#		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
-#	))
+try:
+	print('loading weights from {}'.format(C.base_net_weights))
+	model_rpn.load_weights(C.base_net_weights, by_name=True)
+	model_classifier.load_weights(C.base_net_weights, by_name=True)
+except:
+	print('Could not load pretrained model weights. Weights can be found at {} and {}'.format(
+		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_th_dim_ordering_th_kernels_notop.h5',
+		'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
+	))
 
 optimizer = Adam(lr=1e-5)
 optimizer_classifier = Adam(lr=1e-5)
@@ -142,7 +150,7 @@ model_rpn.compile(optimizer=optimizer, loss=[losses.rpn_loss_cls(num_anchors), l
 model_classifier.compile(optimizer=optimizer_classifier, loss=[losses.class_loss_cls, losses.class_loss_regr(len(classes_count)-1)], metrics={'dense_class_{}'.format(len(classes_count)): 'accuracy'})
 model_all.compile(optimizer='sgd', loss='mae')
 
-epoch_length = 50#1000
+epoch_length = len(train_imgs)#1000
 num_epochs = int(options.num_epochs)
 iter_num = 0
 epoch_num = 0
@@ -244,7 +252,10 @@ while True:
 				if C.verbose:
 					print('Total loss decreased from {} to {}, saving weights'.format(best_loss,curr_loss))
 				best_loss = curr_loss
-				model_all.save_weights(C.model_path)
+				model_path = '{}.{}.{:.4f}.{}'.format(C.model_path.split('.')[-2],
+											   epoch_num, curr_loss,
+											   C.model_path.split('.')[-1])
+				model_all.save_weights(model_path)
 		if epoch_num == num_epochs:
 			print('Training complete, exiting.')
 			sys.exit()

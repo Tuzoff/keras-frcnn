@@ -196,9 +196,12 @@ for idx, img_data in enumerate(test_imgs):
 	X, fx, fy = format_img(img, C)
 
 	img_scaled = np.transpose(X.copy()[0, (2, 1, 0), :, :], (1, 2, 0)).copy()
-	img_scaled[:, :, 0] += 123.68
-	img_scaled[:, :, 1] += 116.779
-	img_scaled[:, :, 2] += 103.939
+	# img_scaled[:, :, 0] += 123.68
+	# img_scaled[:, :, 1] += 116.779
+	# img_scaled[:, :, 2] += 103.939
+	img_scaled[:, :, 0] += C.img_channel_mean[0]
+	img_scaled[:, :, 1] += C.img_channel_mean[1]
+	img_scaled[:, :, 2] += C.img_channel_mean[2]
 
 	img_scaled = img_scaled.astype(np.uint8)
 
@@ -258,7 +261,9 @@ for idx, img_data in enumerate(test_imgs):
 			except:
 				print('Error in measure map')
 				pass
-			bboxes[cls_name].append([16 * x, 16 * y, 16 * (x + w), 16 * (y + h)])
+			# bboxes[cls_name].append([16 * x, 16 * y, 16 * (x + w), 16 * (y + h)])
+			bboxes[cls_name].append([C.rpn_stride * x, C.rpn_stride * y,
+									 C.rpn_stride * (x + w), C.rpn_stride * (y + h)])
 			probs[cls_name].append(np.max(P_cls[0, ii, :]))
 
 	all_dets = []
