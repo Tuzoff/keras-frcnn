@@ -65,8 +65,8 @@ C.rot_90 = options.rot_90
 
 C.model_path = options.output_weight_path
 
-#if options.input_weight_path:
-#	C.base_net_weights = options.input_weight_path
+if options.input_weight_path:
+	C.base_net_weights = options.input_weight_path
 
 all_imgs, classes_count, class_mapping = get_data(options.train_path)
 
